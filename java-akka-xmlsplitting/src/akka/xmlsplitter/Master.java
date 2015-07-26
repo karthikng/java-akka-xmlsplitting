@@ -12,6 +12,8 @@ import scala.xml.XML;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
+import akka.event.Logging;
+import akka.event.LoggingAdapter;
 import akka.routing.RoundRobinRouter;
 import akka.xmlsplitter.pojo.Improviser;
 import akka.xmlsplitter.pojo.StatusComplete;
@@ -19,6 +21,8 @@ import akka.xmlsplitter.pojo.TerminationRequest;
 import akka.xmlsplitter.pojo.Work;
 
 public class Master extends UntypedActor {
+	
+	private LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 	
 	private final int numberOfWorkers;
 	
@@ -54,6 +58,8 @@ public class Master extends UntypedActor {
 				int workerId = 1;
 				java.util.List<Node> bankAccountList = new ArrayList<>();
 				boolean isAllTaskSentToWorker = false;
+				
+				System.out.println("Time taken for loading xml : "+(System.currentTimeMillis() - start)/1000+" sec");
 				while(iterator.hasNext()) {
 					Node bankAccount = iterator.next();
 					
@@ -61,7 +67,7 @@ public class Master extends UntypedActor {
 					isAllTaskSentToWorker = false;
 							
 					if(bankAccountList.size() > divisionFactor) {
-						worker.tell(new Work(bankAccountList, workerId++), getSelf());
+						worker.tell(new Work(getBankAccountAsString(bankAccountList), workerId++), getSelf());
 						bankAccountList = new ArrayList<>();
 						isAllTaskSentToWorker = true;
 					}
@@ -69,7 +75,7 @@ public class Master extends UntypedActor {
 				
 				//Sending the last batch of XML details
 				if(!isAllTaskSentToWorker) {
-					worker.tell(new Work(bankAccountList, workerId++), getSelf());
+					worker.tell(new Work(getBankAccountAsString(bankAccountList), workerId++), getSelf());
 				}
 				
 			}
@@ -89,5 +95,13 @@ public class Master extends UntypedActor {
 		} else {
 			unhandled(message);
 		}
+	}
+
+	private StringBuilder getBankAccountAsString(java.util.List<Node> bankAccountList) {
+		StringBuilder bankAccountString = new StringBuilder();
+		for (Node node : bankAccountList) {
+			bankAccountString.append(node.toString());
+		}
+		return bankAccountString;
 	}
 }
